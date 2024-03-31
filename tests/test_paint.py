@@ -11,7 +11,7 @@ class TestModule(unittest.TestCase):
         """
         Test the generate_color_gradient function.
         """
-        self.assertEqual(czastc.turtle.generate_color_gradient(
+        self.assertEqual(czastc.turtle.generate_gradient_colors(
             6, [[255, 255, 0], [255, 0, 0], [255, 0, 255]]),
             [(1.0, 1.0, 0.0), (1.0, 0.5, 0.0), (1.0, 0.0, 0.0),
                 (1.0, 0.0, 0.0), (1.0, 0.0, 0.5), (1.0, 0.0, 1.0)])

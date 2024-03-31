@@ -269,53 +269,72 @@ def generate_gradient_colors(step: int, color_list: ColorList,
                              weights: Optional[list[float]] = None
                              ) -> ColorList:
     """
-    Generates a list of gradient colors transitioning through 
+    Generates a list of gradient colors transitioning through
         specified colors at given weights.
-    This function creates a gradient color list based on a list of 
+    This function creates a gradient color list based on a list of
         input colors and corresponding weights.
-    Each color in the output list is a tuple of three floats 
-        representing the red, green, and blue channels, 
-        with each channel value ranging from 0.0 to 1.0. 
+    Each color in the output list is a tuple of three floats
+        representing the red, green, and blue channels,
+        with each channel value ranging from 0.0 to 1.0.
     The transition between colors is linear, based on the
         relative weights and the total number of steps specified.
     Args:
-        step: The total number of gradient steps to generate.
-        color_list: A list of colors to include in the gradient.
-        weights: A list of relative positions for each color in the 
-            gradient, with values ranging from 0.0 to 1.0.
-            Must be the same length as `color_list` and sorted in ascending order.
+        step (int): The total number of gradient steps to generate.
+        color_list (ColorList): A list of colors to include in the 
+            gradient.
+        weights (list[float]): A list of relative positions for each 
+            color in the gradient, with values ranging from 0.0 to 1.0.
+            Must be the same length as `color_list` and sorted in 
+            ascending order.
     Returns:
-        A list of tuples representing the gradient colors, with each 
+        A list of tuples representing the gradient colors, with each
             color transitioning smoothly from the
             start to the end color based on the specified weights.
     Raises:
-        ValueError: 
+        ValueError:
             Raised if color_list and weights have different lengths.
             Raised if the list contains less than two colors.
+            Raised if the weights are not sorted in ascending order.
     """
-    if not weights:
-        weights = []
-        for i in range(len(color_list)):
-            weights.append(i / len(color_list) - 1)
-    if len(color_list) != len(weights) or len(color_list) < 2:
-        error = "color_list and weights must have \
-            the same length and at least two elements"
+    if len(color_list) < 2:
+        error = "At least two colors are required for a gradient."
         raise ValueError(error)
+    if not weights:
+        weights = [i / (len(color_list) - 1)
+                   for i in range(len(color_list))]
+    else:
+        if len(color_list) != len(weights):
+            error = "The length of color_list and \
+weights must be the same."
+            raise ValueError(error)
+        if sorted(weights) != weights:
+            error = "Weights must be sorted in ascending order."
+            raise ValueError(error)
     gradient_colors = []
-    steps_between_colors = []
-    for i in range(len(weights) - 1):
-        steps_between_color = (weights[i + 1] - weights[i]) * (step - 1)
-        steps_between_colors.append(steps_between_color)
+    proportional_steps = [round((weights[i + 1]
+                                 - weights[i]) * (step - 1))
+                                 for i in range(len(weights) - 1)]
+    total_proportional_steps = sum(proportional_steps)
+    while total_proportional_steps < step - 1:
+        proportional_steps[-1] += 1
+        total_proportional_steps += 1
+    while total_proportional_steps > step - 1:
+        proportional_steps[-1] -= 1
+        total_proportional_steps -= 1
+    current_index = 0
     for i in range(len(color_list) - 1):
         start_color = color_list[i]
         end_color = color_list[i + 1]
-        for s in range(steps_between_colors[i] + 1):
-            interpolated_color = tuple(
-                start_color[j] + (float(s) / steps_between_colors[i])\
-                     * (end_color[j] - start_color[j])
-                if steps_between_colors[i] > 0 else start_color[j]
-                for j in range(3)
-            )
+        steps_for_this_segment = proportional_steps[i]
+        for s in range(steps_for_this_segment):
+            if current_index >= step - 1:
+                break
+            interpolated_color = [
+                start_color[j] + ((s / max(1, steps_for_this_segment))
+                                  * (end_color[j] - start_color[j]))
+                                  for j in range(3)]
             gradient_colors.append(interpolated_color)
-    gradient_colors = float_color(gradient_colors)
-    return gradient_colors
+            current_index += 1
+    if len(gradient_colors) < step:
+        gradient_colors.append(color_list[-1])
+    return float_color(gradient_colors)
